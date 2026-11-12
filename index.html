@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ja" manifest="offline.appcache">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="でんしゃおと">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#fff3d6">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>でんしゃ おとボタン</title>
+<style>
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#fff3d6;}
+*{-webkit-box-sizing:border-box;box-sizing:border-box;}
+body{font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;color:#4a2c12;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:rgba(0,0,0,0);
+  -webkit-text-size-adjust:100%;touch-action:none;}
+
+#bar{position:fixed;left:0;right:0;top:0;height:52px;}
+#title{position:absolute;left:16px;top:0;line-height:54px;font-size:20px;font-weight:bold;letter-spacing:1px;white-space:nowrap;}
+#vol{position:absolute;right:12px;top:9px;height:36px;line-height:36px;padding:0 14px;border-radius:18px;background:#fff;
+  box-shadow:0 2px 0 rgba(74,44,18,.15);font-size:15px;font-weight:bold;overflow:hidden;white-space:nowrap;}
+#volFill{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffc078;}
+#vol.holding #volFill{width:100%;-webkit-transition:width .9s linear;transition:width .9s linear;}
+#vol span{position:relative;}
+#volHint{font-size:11px;font-weight:normal;opacity:.55;margin-left:6px;}
+
+#grid{position:fixed;left:0;right:0;bottom:0;top:52px;}
+.tile{position:absolute;border-radius:24px;
+  background-image:-webkit-linear-gradient(top,rgba(255,255,255,.4),rgba(255,255,255,0) 50%);
+  background-image:linear-gradient(rgba(255,255,255,.4),rgba(255,255,255,0) 50%);
+  box-shadow:inset 0 -7px 0 rgba(0,0,0,.13),0 5px 0 rgba(74,44,18,.13);
+  -webkit-transition:-webkit-transform .08s,box-shadow .08s;transition:transform .08s,box-shadow .08s;}
+.tile.down{-webkit-transform:translateY(4px) scale(.96);transform:translateY(4px) scale(.96);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.13),0 1px 0 rgba(74,44,18,.13);}
+.tile:after{content:"";position:absolute;left:-6px;top:-6px;right:-6px;bottom:-6px;border-radius:inherit;border:5px solid #fff;opacity:0;}
+.tile.playing:after{-webkit-animation:ring .6s ease-in-out infinite alternate;animation:ring .6s ease-in-out infinite alternate;}
+.emo{position:absolute;left:0;right:0;text-align:center;line-height:1.1;}
+.tile.playing .emo{-webkit-animation:wob .42s ease-in-out infinite alternate;animation:wob .42s ease-in-out infinite alternate;}
+.lab{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;line-height:1.3;}
+.lab span{display:inline-block;background:rgba(255,255,255,.9);border-radius:999px;padding:.1em .6em;font-weight:bold;color:#4a2c12;}
+
+@-webkit-keyframes ring{from{opacity:.2}to{opacity:.95}}
+@keyframes ring{from{opacity:.2}to{opacity:.95}}
+@-webkit-keyframes wob{from{-webkit-transform:rotate(-8deg) scale(1.02)}to{-webkit-transform:rotate(8deg) scale(1.15)}}
+@keyframes wob{from{transform:rotate(-8deg) scale(1.02)}to{transform:rotate(8deg) scale(1.15)}}
+
+#fx{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:hidden;}
+.p{position:absolute;width:30px;text-align:center;font-size:30px;font-weight:bold;line-height:1;
+  text-shadow:0 0 3px #fff,0 0 3px #fff,0 2px 0 #fff;}
+.p1{-webkit-animation:fly1 1s ease-out forwards;animation:fly1 1s ease-out forwards;}
+.p2{-webkit-animation:fly2 1s ease-out forwards;animation:fly2 1s ease-out forwards;}
+.p3{-webkit-animation:fly3 1s ease-out forwards;animation:fly3 1s ease-out forwards;}
+@-webkit-keyframes fly1{0%{-webkit-transform:translate(0,0) scale(.5);opacity:1}100%{-webkit-transform:translate(-46px,-120px) scale(1.3);opacity:0}}
+@keyframes fly1{0%{transform:translate(0,0) scale(.5);opacity:1}100%{transform:translate(-46px,-120px) scale(1.3);opacity:0}}
+@-webkit-keyframes fly2{0%{-webkit-transform:translate(0,0) scale(.5);opacity:1}100%{-webkit-transform:translate(0,-150px) scale(1.4);opacity:0}}
+@keyframes fly2{0%{transform:translate(0,0) scale(.5);opacity:1}100%{transform:translate(0,-150px) scale(1.4);opacity:0}}
+@-webkit-keyframes fly3{0%{-webkit-transform:translate(0,0) scale(.5);opacity:1}100%{-webkit-transform:translate(46px,-120px) scale(1.3);opacity:0}}
+@keyframes fly3{0%{transform:translate(0,0) scale(.5);opacity:1}100%{transform:translate(46px,-120px) scale(1.3);opacity:0}}
+
+#start{position:fixed;left:0;top:0;right:0;bottom:0;background:#fff3d6;z-index:10;text-align:center;
+  -webkit-transition:opacity .35s;transition:opacity .35s;}
+#start.gone{opacity:0;}
+#sTitle{position:absolute;left:0;right:0;top:9%;font-size:34px;font-weight:bold;letter-spacing:2px;}
+#startBtn{position:absolute;left:50%;top:48%;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;
+  background:#ff922b;color:#fff;box-shadow:inset 0 -12px 0 rgba(0,0,0,.15),0 8px 0 rgba(74,44,18,.15);}
+#startBtn .big{font-size:130px;line-height:1;margin-top:52px;
+  -webkit-animation:hop .7s ease-in-out infinite alternate;animation:hop .7s ease-in-out infinite alternate;}
+#startBtn .go{font-size:24px;font-weight:bold;margin-top:12px;}
+@-webkit-keyframes hop{from{-webkit-transform:translateY(0)}to{-webkit-transform:translateY(-14px)}}
+@keyframes hop{from{transform:translateY(0)}to{transform:translateY(-14px)}}
+#hint{position:absolute;left:24px;right:24px;bottom:5%;font-size:14px;line-height:1.8;opacity:.7;}
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="title">🚃 でんしゃ おとボタン</div>
+  <div id="vol"><i id="volFill"></i><span id="volIcon">🔉</span> <span id="volText">ふつう</span><span id="volHint">ながおし</span></div>
+</div>
+<div id="grid"></div>
+<div id="fx"></div>
+<div id="start">
+  <div id="sTitle">でんしゃ おとボタン</div>
+  <div id="startBtn"><div class="big">🚂</div><div class="go">タップして はじめる</div></div>
+  <div id="hint">音が出ないときは、iPadの消音（マナーモード）をオフにして音量を上げてください。<br>右上の 🔉 を長押しすると、音の大きさを3段階で変えられます。</div>
+</div>
+
+<script>
+(function () {
+/* ===== 古いiPad(iOS 9〜)でも動くよう ES5 だけで書いています ===== */
+
+var AC = window.AudioContext || window.webkitAudioContext;
+var ctx = null, master = null, noiseBuf = null, V = null, unlocked = false;
+
+var VOLS = [0.3, 0.55, 0.85];
+var VOL_ICON = ['🔈', '🔉', '🔊'];
+var VOL_NAME = ['ちいさい', 'ふつう', 'おおきい'];
+var volIdx = 1;
+try { var sv = localStorage.getItem('densha-oto-vol'); if (sv !== null && VOLS[+sv] !== undefined) volIdx = +sv; } catch (e) {}
+
+function mf(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+function makeNoise(c) {
+  var len = Math.floor(c.sampleRate * 2), b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+  for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+
+function setupGraph(c) {
+  var comp = c.createDynamicsCompressor();
+  try {
+    comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 6;
+    comp.attack.value = 0.003; comp.release.value = 0.2;
+  } catch (e) {}
+  var m = c.createGain();
+  m.gain.value = VOLS[volIdx];
+  m.connect(comp); comp.connect(c.destination);
+  return m;
+}
+
+/* ---------- 音づくりの部品 ---------- */
+function track(src, t1) { V.srcs.push(src); if (t1 > V.end) V.end = t1; }
+function extend(t) { if (t > V.end) V.end = t; }
+function osc(type, f, t0, t1) {
+  var o = ctx.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f, t0); o.start(t0); o.stop(t1); track(o, t1); return o;
+}
+function noise(t0, t1) {
+  var s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+  s.start(t0, Math.random() * 1.5); s.stop(t1); track(s, t1); return s;
+}
+function amp(v) { var g = ctx.createGain(); g.gain.value = (v === undefined) ? 1 : v; return g; }
+function filt(type, f, q) {
+  var b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f;
+  if (q !== undefined) b.Q.value = q; return b;
+}
+function delay(sec) {
+  var d = ctx.createDelay ? ctx.createDelay(2) : ctx.createDelayNode(2);
+  d.delayTime.value = sec; return d;
+}
+function wire() {
+  for (var i = 0; i < arguments.length - 1; i++) arguments[i].connect(arguments[i + 1]);
+  return arguments[arguments.length - 1];
+}
+function out() { return V.out; }
+
+/* なめらかに上がって・保って・下がる */
+function ahr(p, t, a, peak, hold, r) {
+  p.setValueAtTime(0, t); p.linearRampToValueAtTime(peak, t + a);
+  p.setValueAtTime(peak, t + a + hold); p.linearRampToValueAtTime(0, t + a + hold + r);
+}
+/* たたく音（すぐ立ち上がって減衰） */
+function hit(p, t, peak, dec) {
+  p.setValueAtTime(0.0001, t); p.linearRampToValueAtTime(peak, t + 0.005);
+  p.exponentialRampToValueAtTime(0.0001, t + dec);
+}
+
+/* 汽笛（3つの音を重ねた「ポーッ」） */
+function whistle(t, dur, lvl) {
+  lvl = lvl || 1;
+  var end = t + dur + 0.4, mix = amp(0), lp = filt('lowpass', 2000, 0.5);
+  wire(mix, lp, out());
+  ahr(mix.gain, t, 0.06, 0.5 * lvl, dur, 0.3);
+  var lfo = osc('sine', 5.5, t, end);
+  var fr = [311.1, 370, 466.2], lv = [0.5, 0.36, 0.3];
+  for (var i = 0; i < 3; i++) {
+    var f = fr[i], depth = amp(f * 0.006);
+    lfo.connect(depth);
+    var o = osc('triangle', f * 0.92, t, end); o.frequency.linearRampToValueAtTime(f, t + 0.12); depth.connect(o.frequency);
+    var o2 = osc('square', f * 0.92, t, end); o2.frequency.linearRampToValueAtTime(f, t + 0.12); depth.connect(o2.frequency);
+    wire(o, amp(lv[i]), mix); wire(o2, amp(lv[i] * 0.12), mix);
+  }
+  var n = noise(t, end), bp = filt('bandpass', 1800, 0.9), ng = amp(0);
+  wire(n, bp, ng, out());
+  ahr(ng.gain, t, 0.03, 0.22 * lvl, dur, 0.3);
+}
+
+/* ドスン（ひくい音＋ザッ） */
+function thud(t, f, a) {
+  var o = osc('sine', f * 2, t, t + 0.35), g = amp(0);
+  o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
+  wire(o, g, out()); hit(g.gain, t, a, 0.3);
+  var n = noise(t, t + 0.12), lp = filt('lowpass', 1100, 0.7), ng = amp(0);
+  wire(n, lp, ng, out()); hit(ng.gain, t, a * 0.6, 0.08);
+}
+
+/* チャイム系のきれいな音 */
+function tone(t, f, dec, a) {
+  var o = osc('sine', f, t, t + dec + 0.05), g = amp(0);
+  wire(o, g, out()); hit(g.gain, t, a, dec);
+  var o2 = osc('sine', f * 4, t, t + dec * 0.3 + 0.05), g2 = amp(0);
+  wire(o2, g2, out()); hit(g2.gain, t, a * 0.12, dec * 0.3);
+}
+function melTone(t, f, dec, a) {
+  tone(t, f, dec, a);
+  var o = osc('triangle', f * 2, t, t + dec * 0.6 + 0.05), g = amp(0);
+  wire(o, g, out()); hit(g.gain, t, a * 0.15, dec * 0.6);
+}
+
+/* ベル（チンチン） */
+function bell(t, f, a) {
+  var P = [[1, 1, 1.4], [2.76, 0.5, 0.7], [5.4, 0.28, 0.35], [8.93, 0.14, 0.18]];
+  for (var i = 0; i < P.length; i++) {
+    var o = osc('sine', f * P[i][0], t, t + P[i][2] + 0.05), g = amp(0);
+    wire(o, g, out()); hit(g.gain, t, a * P[i][1], P[i][2]);
+  }
+  var n = noise(t, t + 0.04), hp = filt('highpass', 5000, 0.7), ng = amp(0);
+  wire(n, hp, ng, out()); hit(ng.gain, t, a * 0.4, 0.02);
+}
+
+/* ふねの汽笛（ひくい「ボーッ」） */
+function horn(t, dur, a) {
+  var end = t + dur + 0.8, mix = amp(0), lp = filt('lowpass', 250, 2);
+  wire(mix, lp, out());
+  lp.frequency.setValueAtTime(220, t); lp.frequency.linearRampToValueAtTime(700, t + 0.25);
+  lp.frequency.setValueAtTime(700, t + dur); lp.frequency.linearRampToValueAtTime(220, t + dur + 0.6);
+  var F = [[87.3, 0.5], [88.4, 0.5], [131, 0.25]];
+  for (var i = 0; i < F.length; i++) {
+    var o = osc('sawtooth', F[i][0] * 0.95, t, end);
+    o.frequency.linearRampToValueAtTime(F[i][0], t + 0.2);
+    wire(o, amp(F[i][1]), mix);
+  }
+  ahr(mix.gain, t, 0.15, a, dur, 0.6);
+}
+
+/* ラッパ */
+function brass(t, f, dur, a) {
+  var end = t + dur + 0.15, lp = filt('lowpass', 400, 2), g = amp(0);
+  wire(lp, g, out());
+  var o1 = osc('sawtooth', f, t, end), o2 = osc('sawtooth', f * 1.005, t, end);
+  o1.connect(lp); o2.connect(lp);
+  lp.frequency.setValueAtTime(350, t); lp.frequency.linearRampToValueAtTime(3500, t + 0.035);
+  lp.frequency.linearRampToValueAtTime(2000, t + 0.16);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 0.02);
+  g.gain.linearRampToValueAtTime(a * 0.8, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + 0.1);
+  if (dur > 0.4) {
+    var lfo = osc('sine', 5.5, t, end), d = amp(0);
+    lfo.connect(d); d.connect(o1.frequency); d.connect(o2.frequency);
+    d.gain.setValueAtTime(0, t + 0.2); d.gain.linearRampToValueAtTime(f * 0.012, t + 0.45);
+  }
+}
+
+/* もっきん */
+function mallet(t, f, a) {
+  var o = osc('sine', f, t, t + 0.7), g = amp(0);
+  wire(o, g, out()); hit(g.gain, t, a, 0.65);
+  var o2 = osc('sine', f * 3.98, t, t + 0.12), g2 = amp(0);
+  wire(o2, g2, out()); hit(g2.gain, t, a * 0.35, 0.1);
+}
+
+function beep(t, f, d, a) {
+  var o = osc('sine', f, t, t + d + 0.03), g = amp(0);
+  wire(o, g, out()); ahr(g.gain, t, 0.005, a, d, 0.02);
+}
+
+function peep(t, f, a) {
+  var o = osc('sine', f, t, t + 0.14), g = amp(0);
+  wire(o, g, out());
+  o.frequency.linearRampToValueAtTime(f * 1.4, t + 0.035);
+  o.frequency.exponentialRampToValueAtTime(f * 0.9, t + 0.11);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 0.012);
+  g.gain.setValueAtTime(a, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+}
+
+function croak(t, d) {
+  var o = osc('sawtooth', 34, t, t + d + 0.05);
+  o.frequency.linearRampToValueAtTime(44, t + d);
+  var b1 = filt('bandpass', 600, 6), b2 = filt('bandpass', 1350, 5), g = amp(0);
+  o.connect(b1); o.connect(b2); b1.connect(g); b2.connect(g); g.connect(out());
+  b1.frequency.setValueAtTime(550, t); b1.frequency.linearRampToValueAtTime(820, t + d);
+  ahr(g.gain, t, 0.015, 2.2, d - 0.05, 0.035);
+}
+
+/* ---------- 20この音 ---------- */
+function s_whistle(t) { whistle(t, 1.4); }
+
+function s_chuff(t) {
+  var times = [], tt = t, gap = 0.36, i;
+  for (i = 0; i < 10; i++) { times.push(tt); tt += gap; gap = Math.max(0.17, gap * 0.86); }
+  var n = noise(t, tt), hp = filt('highpass', 350, 0.7), bp = filt('bandpass', 1500, 0.6), g = amp(0);
+  wire(n, hp, bp, g, out());
+  var th = osc('sine', 75, t, tt), tg = amp(0);
+  wire(th, tg, out());
+  for (i = 0; i < times.length; i++) {
+    var ac = (i % 2) ? 0.65 : 1;
+    hit(g.gain, times[i], 0.9 * ac, 0.15);
+    hit(tg.gain, times[i], 0.3 * ac, 0.1);
+  }
+  whistle(tt + 0.05, 0.14, 0.9);
+  whistle(tt + 0.42, 0.8, 0.9);
+}
+
+function s_gatan(t) {
+  var end = t + 2.1;
+  var n = noise(t, end), lp = filt('lowpass', 1300, 0.7), ng = amp(0);
+  wire(n, lp, ng, out());
+  var r = noise(t, end), rl = filt('lowpass', 170, 0.7), rg = amp(0);
+  wire(r, rl, rg, out()); ahr(rg.gain, t, 0.25, 1.2, 1.35, 0.45);
+  var pat = [0, 0.11, 0.43, 0.54];
+  for (var c = 0; c < 2; c++) {
+    for (var k = 0; k < 4; k++) {
+      var tt = t + c * 0.92 + pat[k], hi = k < 2, a = (k % 2) ? 0.7 : 1, f = hi ? 105 : 80;
+      var o = osc('sine', f * 1.8, tt, tt + 0.3), og = amp(0);
+      o.frequency.exponentialRampToValueAtTime(f, tt + 0.05);
+      wire(o, og, out()); hit(og.gain, tt, 0.75 * a, 0.25);
+      hit(ng.gain, tt, 0.45 * a, 0.06);
+      var m = osc('triangle', hi ? 820 : 640, tt, tt + 0.08), mg = amp(0);
+      wire(m, mg, out()); hit(mg.gain, tt, 0.06 * a, 0.06);
+    }
+  }
+}
+
+function s_shinkansen(t) {
+  var mid = t + 1.15, end = t + 2.6;
+  var n = noise(t, end), bp = filt('bandpass', 400, 0.6), ng = amp(0);
+  wire(n, bp, ng, out());
+  bp.frequency.setValueAtTime(350, t); bp.frequency.exponentialRampToValueAtTime(1800, mid);
+  bp.frequency.exponentialRampToValueAtTime(380, end);
+  ng.gain.setValueAtTime(0.001, t); ng.gain.exponentialRampToValueAtTime(0.9, mid);
+  ng.gain.exponentialRampToValueAtTime(0.001, end);
+  var o = osc('sawtooth', 205, t, end), lp = filt('lowpass', 700, 1), og = amp(0);
+  wire(o, lp, og, out());
+  o.frequency.setValueAtTime(205, mid - 0.15); o.frequency.linearRampToValueAtTime(160, mid + 0.2);
+  og.gain.setValueAtTime(0.001, t); og.gain.exponentialRampToValueAtTime(0.35, mid);
+  og.gain.exponentialRampToValueAtTime(0.001, end);
+  var w = osc('sine', 1300, t, end), wg = amp(0);
+  wire(w, wg, out());
+  w.frequency.setValueAtTime(1300, mid - 0.15); w.frequency.linearRampToValueAtTime(1000, mid + 0.2);
+  wg.gain.setValueAtTime(0.001, t); wg.gain.exponentialRampToValueAtTime(0.07, mid);
+  wg.gain.exponentialRampToValueAtTime(0.001, end);
+}
+
+function s_melody(t) {
+  var N = [72, 76, 79, 84, 83, 79, 81, 83, 84, 86, 88, 84], D = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4];
+  var q = 0.16, tt = t, i;
+  for (i = 0; i < N.length; i++) {
+    var last = i === N.length - 1;
+    melTone(tt, mf(N[i]), last ? 1.4 : 0.45, 0.3);
+    tt += D[i] * q;
+  }
+  var B = [[60, 0], [55, 4], [53, 8], [55, 10], [60, 12]];
+  for (i = 0; i < B.length; i++) {
+    var bt = t + B[i][1] * q, o = osc('triangle', mf(B[i][0]), bt, bt + 1.3), g = amp(0);
+    wire(o, g, out()); hit(g.gain, bt, 0.28, i === B.length - 1 ? 1.2 : 0.6);
+  }
+}
+
+function s_door(t) {
+  for (var k = 0; k < 2; k++) {
+    var p = t + k * 0.5;
+    tone(p, 1175, 0.4, 0.3); tone(p + 0.2, 932, 0.55, 0.3);
+  }
+  var tp = t + 1.1, n = noise(tp, tp + 0.95), hp = filt('highpass', 2500, 0.7), g = amp(0);
+  wire(n, hp, g, out());
+  hp.frequency.setValueAtTime(2800, tp); hp.frequency.exponentialRampToValueAtTime(1100, tp + 0.85);
+  g.gain.setValueAtTime(0, tp); g.gain.linearRampToValueAtTime(0.55, tp + 0.04);
+  g.gain.exponentialRampToValueAtTime(0.0001, tp + 0.9);
+  thud(t + 1.75, 85, 0.85);
+  thud(t + 1.83, 120, 0.3);
+}
+
+function s_tram(t) { bell(t, 1250, 0.38); bell(t + 0.32, 1250, 0.38); }
+
+function s_announce(t) {
+  var N = [77, 81, 84, 89];
+  for (var i = 0; i < 4; i++) tone(t + i * 0.36, mf(N[i]), i === 3 ? 1.6 : 1.1, 0.3);
+}
+
+function s_motor(t) {
+  var sc = [0, 2, 4, 5, 7, 9, 11, 12], step = 0.27, end = t + 3.3, base = 65, i;
+  var o1 = osc('sawtooth', mf(base), t, end), o2 = osc('square', mf(base) * 0.5, t, end);
+  var bp = filt('bandpass', 1000, 0.7), lp = filt('lowpass', 2600, 0.7), g = amp(0);
+  wire(o1, bp); wire(o2, amp(0.5), bp); wire(bp, lp, g, out());
+  for (i = 0; i < sc.length; i++) {
+    var f = mf(base + sc[i]), ts = t + i * step;
+    if (i) {
+      o1.frequency.linearRampToValueAtTime(f, ts + 0.05);
+      o2.frequency.linearRampToValueAtTime(f * 0.5, ts + 0.05);
+    }
+    o1.frequency.linearRampToValueAtTime(f * 1.025, ts + step);
+    o2.frequency.linearRampToValueAtTime(f * 0.5125, ts + step);
+  }
+  var tz = t + sc.length * step, top = mf(base + 12) * 1.7;
+  o1.frequency.exponentialRampToValueAtTime(top, tz + 0.9);
+  o2.frequency.exponentialRampToValueAtTime(top * 0.5, tz + 0.9);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.4, t + 0.25);
+  g.gain.setValueAtTime(0.4, tz + 0.2); g.gain.linearRampToValueAtTime(0, tz + 1.0);
+  var n = noise(t, end), nl = filt('lowpass', 300, 0.7), ng = amp(0);
+  wire(n, nl, ng, out()); ahr(ng.gain, t, 0.3, 0.5, 2.0, 0.8);
+}
+
+function s_ship(t) { horn(t, 0.3, 0.6); horn(t + 0.75, 1.5, 0.65); }
+
+function s_plane(t) {
+  var mid = t + 1.4, end = t + 3.0;
+  var n = noise(t, end), lp = filt('lowpass', 300, 0.8), g = amp(0);
+  wire(n, lp, g, out());
+  lp.frequency.setValueAtTime(300, t); lp.frequency.exponentialRampToValueAtTime(1500, mid);
+  lp.frequency.exponentialRampToValueAtTime(350, end);
+  g.gain.setValueAtTime(0.001, t); g.gain.exponentialRampToValueAtTime(0.9, mid);
+  g.gain.exponentialRampToValueAtTime(0.001, end);
+  var w = osc('triangle', 950, t, end), wg = amp(0);
+  wire(w, wg, out());
+  w.frequency.setValueAtTime(950, mid - 0.2); w.frequency.linearRampToValueAtTime(720, mid + 0.35);
+  wg.gain.setValueAtTime(0.001, t); wg.gain.exponentialRampToValueAtTime(0.08, mid);
+  wg.gain.exponentialRampToValueAtTime(0.001, end);
+  var r = noise(t, end), rl = filt('lowpass', 120, 0.7), rg = amp(0);
+  wire(r, rl, rg, out());
+  rg.gain.setValueAtTime(0.001, t); rg.gain.exponentialRampToValueAtTime(1.0, mid);
+  rg.gain.exponentialRampToValueAtTime(0.001, end);
+}
+
+function s_heli(t) {
+  var end = t + 2.8, n = noise(t, end), lp = filt('lowpass', 450, 1), g = amp(0);
+  wire(n, lp, g, out());
+  var o = osc('sine', 60, t, end), og = amp(0);
+  wire(o, og, out());
+  var per = 1 / 11.5;
+  for (var tt = t; tt < end - 0.1; tt += per) {
+    var e = Math.min(1, (tt - t) / 0.6, (end - 0.05 - tt) / 0.8);
+    if (e < 0.02) e = 0.02;
+    hit(g.gain, tt, 1.0 * e, per * 0.85);
+    hit(og.gain, tt, 0.45 * e, per * 0.8);
+  }
+  var s = osc('sawtooth', 190, t, end), sl = filt('lowpass', 500, 1), sg = amp(0);
+  wire(s, sl, sg, out()); ahr(sg.gain, t, 0.5, 0.07, 1.4, 0.8);
+}
+
+function s_rocket(t) {
+  beep(t, 880, 0.09, 0.35); beep(t + 0.45, 880, 0.09, 0.35); beep(t + 0.9, 880, 0.09, 0.35);
+  beep(t + 1.35, 1760, 0.3, 0.3);
+  var tl = t + 1.55, end = t + 4.2;
+  var n = noise(tl, end), lp = filt('lowpass', 200, 0.8), g = amp(0);
+  wire(n, lp, g, out());
+  lp.frequency.setValueAtTime(200, tl); lp.frequency.exponentialRampToValueAtTime(2400, tl + 2.0);
+  g.gain.setValueAtTime(0, tl); g.gain.linearRampToValueAtTime(0.75, tl + 0.5);
+  g.gain.setValueAtTime(0.75, tl + 1.5); g.gain.linearRampToValueAtTime(0, end);
+  var r = noise(tl, end), rl = filt('lowpass', 110, 0.7), rg = amp(0);
+  wire(r, rl, rg, out()); ahr(rg.gain, tl, 0.4, 1.2, 1.2, 1.0);
+  var o = osc('sine', 150, tl, end), og = amp(0);
+  wire(o, og, out());
+  o.frequency.exponentialRampToValueAtTime(900, tl + 2.3);
+  ahr(og.gain, tl, 0.4, 0.12, 1.4, 0.8);
+}
+
+function s_balloon(t) {
+  var d = 1.9, end = t + d + 0.1;
+  var o = osc('sawtooth', 430, t, end);
+  o.frequency.exponentialRampToValueAtTime(170, t + d);
+  var l1 = osc('square', 26, t, end), l1g = amp(45);
+  l1.frequency.linearRampToValueAtTime(14, t + d); wire(l1, l1g, o.frequency);
+  var l2 = osc('sine', 3.1, t, end); wire(l2, amp(60), o.frequency);
+  var bp = filt('bandpass', 1000, 1.4), am = amp(0.75), g = amp(0);
+  wire(o, bp, am, g, out());
+  var l3 = osc('sine', 31, t, end); wire(l3, amp(0.25), am.gain);
+  ahr(g.gain, t, 0.03, 0.75, d - 0.2, 0.15);
+  var n = noise(t, end), hp = filt('highpass', 2500, 0.7), ng = amp(0);
+  wire(n, hp, ng, out()); ahr(ng.gain, t, 0.03, 0.06, d - 0.2, 0.15);
+}
+
+function s_fireworks(t) {
+  var o = osc('sine', 500, t, t + 1.15), g = amp(0);
+  wire(o, g, out());
+  o.frequency.exponentialRampToValueAtTime(1700, t + 1.05);
+  ahr(g.gain, t, 0.1, 0.2, 0.8, 0.15);
+  var v = osc('sine', 9, t, t + 1.15); wire(v, amp(25), o.frequency);
+  var tb = t + 1.2;
+  var b = osc('sine', 110, tb, tb + 1.2), bg = amp(0);
+  wire(b, bg, out());
+  b.frequency.exponentialRampToValueAtTime(38, tb + 0.5); hit(bg.gain, tb, 0.9, 1.1);
+  var n = noise(tb, tb + 1.0), nl = filt('lowpass', 700, 0.7), ng = amp(0);
+  wire(n, nl, ng, out()); hit(ng.gain, tb, 0.7, 0.9);
+  var c = noise(tb + 0.25, tb + 1.6), ch = filt('highpass', 2200, 0.7);
+  c.connect(ch);
+  for (var i = 0; i < 26; i++) {
+    var ct = tb + 0.3 + Math.random() * 1.2, cg = amp(0);
+    wire(ch, cg, out());
+    hit(cg.gain, ct, 0.12 + Math.random() * 0.2, 0.02 + Math.random() * 0.03);
+  }
+}
+
+function s_fanfare(t) {
+  brass(t, mf(67), 0.13, 0.28); brass(t + 0.2, mf(67), 0.06, 0.28); brass(t + 0.3, mf(67), 0.06, 0.28);
+  brass(t + 0.42, mf(72), 0.9, 0.3); brass(t + 0.42, mf(76), 0.9, 0.18);
+}
+
+function s_doremi(t) {
+  var N = [72, 74, 76, 77, 79, 81, 83, 84, 83, 81, 79, 77, 76, 74, 72];
+  for (var i = 0; i < N.length; i++) mallet(t + i * 0.1, mf(N[i]), i === 7 ? 0.42 : 0.34);
+}
+
+function s_chick(t) {
+  peep(t, 2400, 0.3); peep(t + 0.17, 2200, 0.28);
+  peep(t + 0.6, 2400, 0.3); peep(t + 0.77, 2200, 0.28);
+}
+
+function s_frog(t) { croak(t, 0.17); croak(t + 0.25, 0.22); croak(t + 0.75, 0.17); croak(t + 1.0, 0.22); }
+
+function s_ufo(t) {
+  var d = 2.3, end = t + d;
+  var o = osc('sine', 500, t, end);
+  o.frequency.exponentialRampToValueAtTime(1150, t + 1.0); o.frequency.exponentialRampToValueAtTime(520, end);
+  var l = osc('sine', 7, t, end), lg = amp(140);
+  l.frequency.linearRampToValueAtTime(12, end); wire(l, lg, o.frequency);
+  var g = amp(0);
+  wire(o, g, out()); ahr(g.gain, t, 0.06, 0.32, d - 0.5, 0.4);
+  wire(g, delay(0.23), amp(0.35), out());
+  wire(g, delay(0.46), amp(0.15), out());
+  extend(end + 0.6);
+}
+
+/* e: 絵文字 / l: ラベル / g: 音量の補正 / fn: 音 */
+var S = [
+  { e: '🚂', l: 'きてき',       g: 0.8, fn: s_whistle },
+  { e: '💨', l: 'シュッシュッ', g: 0.85, fn: s_chuff },
+  { e: '🚃', l: 'ガタンゴトン', g: 1.1, fn: s_gatan },
+  { e: '🚄', l: 'しんかんせん', g: 1.0, fn: s_shinkansen },
+  { e: '🚉', l: 'はっしゃ♪',   g: 1.3, fn: s_melody },
+  { e: '🚪', l: 'ドア',         g: 1.15, fn: s_door },
+  { e: '🚋', l: 'チンチン',     g: 1.0, fn: s_tram },
+  { e: '📢', l: 'ピンポンパンポーン', g: 1.5, fn: s_announce },
+  { e: '🚆', l: 'モーター',     g: 0.85, fn: s_motor },
+  { e: '🚢', l: 'ふね',         g: 0.8, fn: s_ship },
+  { e: '✈️', l: 'ひこうき', g: 1.2, fn: s_plane },
+  { e: '🚁', l: 'ヘリコプター', g: 1.6, fn: s_heli },
+  { e: '🚀', l: 'ロケット',     g: 1.0, fn: s_rocket },
+  { e: '🎈', l: 'ふうせん',     g: 1.1, fn: s_balloon },
+  { e: '🎆', l: 'はなび',       g: 0.75, fn: s_fireworks },
+  { e: '🎺', l: 'ラッパ',       g: 0.8, fn: s_fanfare },
+  { e: '🎹', l: 'ドレミ',       g: 1.0, fn: s_doremi },
+  { e: '🐤', l: 'ひよこ',       g: 1.2, fn: s_chick },
+  { e: '🐸', l: 'かえる',       g: 1.1, fn: s_frog },
+  { e: '👽', l: 'うちゅうじん', g: 0.75, fn: s_ufo }
+];
+var PAL = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#b197fc', '#f783ac', '#a9e34b'];
+
+/* ---------- 再生の管理 ---------- */
+function Voice(dest, trim) {
+  this.out = ctx.createGain(); this.out.gain.value = trim; this.out.connect(dest);
+  this.srcs = []; this.end = 0; this.dead = false;
+}
+var active = [], MAX_VOICES = 6;
+
+function killVoice(v, fade) {
+  if (!v || v.dead) return;
+  v.dead = true;
+  var now = ctx.currentTime, g = v.out.gain;
+  try { g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(0, now + fade); } catch (e) {}
+  for (var i = 0; i < v.srcs.length; i++) { try { v.srcs[i].stop(now + fade + 0.02); } catch (e2) {} }
+  setTimeout(function () { try { v.out.disconnect(); } catch (e3) {} }, (fade + 0.15) * 1000);
+}
+
+function resume() {
+  if (ctx && ctx.state && ctx.state !== 'running' && ctx.resume) {
+    try { var p = ctx.resume(); if (p && p['catch']) p['catch'](function () {}); } catch (e) {}
+  }
+}
+
+function unlock() {
+  if (!AC) return;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e0) {}
+  if (!ctx) {
+    try { ctx = new AC(); } catch (e) { return; }
+    master = setupGraph(ctx); noiseBuf = makeNoise(ctx);
+  }
+  resume();
+  if (!unlocked) {
+    try {
+      var b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+      s.buffer = b; s.connect(ctx.destination); s.start(0);
+    } catch (e2) {}
+    unlocked = true;
+  }
+}
+
+function play(i) {
+  if (!ctx) return;
+  resume();
+  if (active[i]) killVoice(active[i], 0.06);
+  var live = [];
+  for (var k = 0; k < active.length; k++) if (active[k] && !active[k].dead) live.push(active[k]);
+  if (live.length >= MAX_VOICES) {
+    live.sort(function (a, b) { return a.t0 - b.t0; });
+    killVoice(live[0], 0.08); stopAnim(live[0].idx);
+  }
+  var v = new Voice(master, S[i].g);
+  v.idx = i; v.t0 = ctx.currentTime;
+  V = v;
+  try { S[i].fn(ctx.currentTime + 0.03); } catch (e) { if (window.console) console.error(e); }
+  V = null;
+  active[i] = v;
+  startAnim(i);
+  var ms = Math.max(0.3, v.end - ctx.currentTime) * 1000 + 100;
+  setTimeout(function () {
+    if (active[i] === v) { active[i] = null; stopAnim(i); }
+    try { v.out.disconnect(); } catch (e2) {}
+  }, ms);
+}
+
+/* ---------- 画面 ---------- */
+function $(id) { return document.getElementById(id); }
+var grid = $('grid'), fx = $('fx'), volEl = $('vol'), tiles = [];
+
+for (var n = 0; n < S.length; n++) {
+  var el = document.createElement('div');
+  el.className = 'tile';
+  el.setAttribute('data-i', n);
+  el.style.backgroundColor = PAL[n % PAL.length];
+  el.innerHTML = '<div class="emo">' + S[n].e + '</div><div class="lab"><span>' + S[n].l + '</span></div>';
+  grid.appendChild(el);
+  tiles.push(el);
+}
+
+function layout() {
+  var W = window.innerWidth, H = window.innerHeight - 52;
+  var land = W > H + 52;
+  var cols = land ? 5 : 4, rows = land ? 4 : 5;
+  var base = Math.min(W, H);
+  var pad = Math.round(base * 0.015) + 6, gap = Math.round(base * 0.02) + 6;
+  var cw = (W - pad * 2 - gap * (cols - 1)) / cols;
+  var ch = (H - pad * 2 - gap * (rows - 1)) / rows;
+  var m = Math.min(cw, ch);
+  for (var i = 0; i < tiles.length; i++) {
+    var el = tiles[i], r = Math.floor(i / cols), c = i % cols;
+    el.style.left = (pad + c * (cw + gap)) + 'px';
+    el.style.top = (pad + r * (ch + gap)) + 'px';
+    el.style.width = cw + 'px';
+    el.style.height = ch + 'px';
+    el.style.borderRadius = Math.round(m * 0.16) + 'px';
+    var es = Math.round(m * 0.5), emo = el.firstChild, lab = el.lastChild;
+    emo.style.fontSize = es + 'px';
+    emo.style.top = Math.round(ch * 0.42 - es * 0.6) + 'px';
+    var len = S[i].l.length + 1.2;
+    var ls = Math.max(10, Math.min(Math.round(m * 0.125), Math.floor(cw * 0.92 / len)));
+    lab.style.fontSize = ls + 'px';
+    lab.style.bottom = Math.round(ch * 0.08) + 'px';
+  }
+}
+layout();
+window.addEventListener('resize', layout);
+window.addEventListener('orientationchange', function () { setTimeout(layout, 300); });
+
+var SYM = ['♪', '♫', '★', '●', '♪'];
+var PCOL = ['#ff6b6b', '#4dabf7', '#fcc419', '#51cf66', '#9775fa', '#f06595'];
+function burst(el) {
+  if (fx.childNodes.length > 36) return;
+  var r = el.getBoundingClientRect();
+  for (var k = 0; k < 3; k++) {
+    var p = document.createElement('div');
+    p.className = 'p p' + (k + 1);
+    p.textContent = SYM[Math.floor(Math.random() * SYM.length)];
+    p.style.color = PCOL[Math.floor(Math.random() * PCOL.length)];
+    p.style.left = (r.left + r.width * (0.25 + 0.25 * k) - 15) + 'px';
+    p.style.top = (r.top + r.height * 0.25) + 'px';
+    fx.appendChild(p);
+    removeLater(p);
+  }
+}
+function removeLater(p) { setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 1050); }
+
+function startAnim(i) {
+  var el = tiles[i];
+  el.className = 'tile down playing';
+  clearTimeout(el._dt);
+  el._dt = setTimeout(function () { el.className = active[i] ? 'tile playing' : 'tile'; }, 140);
+  burst(el);
+}
+function stopAnim(i) { clearTimeout(tiles[i]._dt); tiles[i].className = 'tile'; }
+
+/* 音の大きさ（長押しで切りかえ） */
+var volTimer = null;
+function showVol() {
+  $('volIcon').textContent = VOL_ICON[volIdx];
+  $('volText').textContent = VOL_NAME[volIdx];
+  if (master) master.gain.value = VOLS[volIdx];
+}
+function volPress() {
+  volEl.className = 'holding';
+  clearTimeout(volTimer);
+  volTimer = setTimeout(function () {
+    volTimer = null;
+    volIdx = (volIdx + 1) % VOLS.length;
+    showVol();
+    try { localStorage.setItem('densha-oto-vol', String(volIdx)); } catch (e) {}
+    volEl.className = '';
+    if (ctx) {
+      var v = new Voice(master, 1); V = v;
+      tone(ctx.currentTime + 0.02, 1318, 0.3, 0.3);
+      V = null;
+      setTimeout(function () { try { v.out.disconnect(); } catch (e2) {} }, 700);
+    }
+  }, 900);
+}
+function volRelease() {
+  if (volTimer) { clearTimeout(volTimer); volTimer = null; }
+  volEl.className = '';
+}
+showVol();
+
+/* はじめる */
+var started = false;
+function start() {
+  if (started) return;
+  started = true;
+  var st = $('start');
+  st.className = 'gone';
+  setTimeout(function () { st.style.display = 'none'; }, 400);
+}
+if (!AC) {
+  $('startBtn').lastChild.textContent = 'このブラウザでは音が出せません';
+}
+
+/* ---------- タッチ操作 ---------- */
+var passiveOK = false;
+try {
+  var po = Object.defineProperty({}, 'passive', { get: function () { passiveOK = true; return true; } });
+  window.addEventListener('ptest', null, po); window.removeEventListener('ptest', null, po);
+} catch (e) {}
+var NP = passiveOK ? { passive: false } : false;
+var lastTouch = 0;
+
+function tileOf(n) {
+  while (n && n !== document) {
+    if (n.getAttribute && n.getAttribute('data-i') !== null) return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+function isVol(n) {
+  while (n && n !== document) { if (n.id === 'vol') return true; n = n.parentNode; }
+  return false;
+}
+
+document.addEventListener('touchstart', function (e) {
+  e.preventDefault();
+  lastTouch = Date.now();
+  if (!started) return;
+  resume();
+  for (var k = 0; k < e.changedTouches.length; k++) {
+    var tg = e.changedTouches[k].target, el = tileOf(tg);
+    if (el) play(+el.getAttribute('data-i'));
+    else if (isVol(tg)) volPress();
+  }
+}, NP);
+document.addEventListener('touchmove', function (e) { e.preventDefault(); }, NP);
+document.addEventListener('touchend', function (e) {
+  e.preventDefault();
+  lastTouch = Date.now();
+  unlock();
+  if (!started) { start(); return; }
+  for (var k = 0; k < e.changedTouches.length; k++) {
+    if (isVol(e.changedTouches[k].target)) volRelease();
+  }
+}, NP);
+document.addEventListener('touchcancel', function () { volRelease(); }, NP);
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+/* パソコンのマウスでも遊べるように */
+document.addEventListener('mousedown', function (e) {
+  if (Date.now() - lastTouch < 1000) return;
+  unlock();
+  if (!started) { start(); return; }
+  var el = tileOf(e.target);
+  if (el) play(+el.getAttribute('data-i'));
+  else if (isVol(e.target)) volPress();
+});
+document.addEventListener('mouseup', function () {
+  if (Date.now() - lastTouch < 1000) return;
+  volRelease();
+});
+
+/* ---------- オフライン対応 ---------- */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || /[?&]sw=1/.test(location.search))) {
+  try { navigator.serviceWorker.register('sw.js')['catch'](function () {}); } catch (e) {}
+}
+if (window.applicationCache) {
+  try {
+    window.applicationCache.addEventListener('updateready', function () {
+      try { window.applicationCache.swapCache(); } catch (e2) {}
+    });
+  } catch (e) {}
+}
+
+/* 動作確認用（遊ぶときには使いません） */
+window.__audioState = function () { return ctx ? (ctx.state || 'running') : 'none'; };
+/* 音を画面外で合成して大きさを測る */
+window.__renderTest = function (i) {
+  var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  var sr = 44100, oc = new OAC(1, sr * 5, sr);
+  var sc = ctx, sn = noiseBuf, svv = V;
+  ctx = oc; noiseBuf = makeNoise(oc);
+  var v = new Voice(oc.destination, S[i].g); V = v;
+  S[i].fn(0.05);
+  var endT = v.end;
+  ctx = sc; noiseBuf = sn; V = svv;
+  return oc.startRendering().then(function (buf) {
+    var d = buf.getChannelData(0), pk = 0, bad = 0, win = Math.floor(sr * 0.4), hop = Math.floor(sr * 0.1), loud = 0, k;
+    for (k = 0; k < d.length; k++) { var x = d[k]; if (x !== x) { bad++; continue; } if (Math.abs(x) > pk) pk = Math.abs(x); }
+    for (var s0 = 0; s0 + win < d.length; s0 += hop) {
+      var ss = 0;
+      for (k = s0; k < s0 + win; k++) ss += d[k] * d[k];
+      var rms = Math.sqrt(ss / win); if (rms > loud) loud = rms;
+    }
+    return { i: i, label: S[i].l, end: Math.round(endT * 100) / 100, peak: Math.round(pk * 1000) / 1000, loud: Math.round(loud * 1000) / 1000, nan: bad };
+  });
+};
+})();
+</script>
+</body>
+</html>
