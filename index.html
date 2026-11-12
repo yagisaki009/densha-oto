@@ -41,14 +41,14 @@ body{font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Hiragino Kaku Goth
 .tile:after{content:"";position:absolute;left:-6px;top:-6px;right:-6px;bottom:-6px;border-radius:inherit;border:5px solid #fff;opacity:0;}
 .tile.playing:after{-webkit-animation:ring .6s ease-in-out infinite alternate;animation:ring .6s ease-in-out infinite alternate;}
 .emo{position:absolute;left:0;right:0;text-align:center;line-height:1.1;}
-.tile.playing .emo{-webkit-animation:wob .42s ease-in-out infinite alternate;animation:wob .42s ease-in-out infinite alternate;}
+.tile.playing .emo{-webkit-animation:wob 1.6s ease-in-out infinite alternate;animation:wob 1.6s ease-in-out infinite alternate;}
 .lab{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;line-height:1.3;}
 .lab span{display:inline-block;background:rgba(255,255,255,.9);border-radius:999px;padding:.1em .6em;font-weight:bold;color:#4a2c12;}
 
 @-webkit-keyframes ring{from{opacity:.2}to{opacity:.95}}
 @keyframes ring{from{opacity:.2}to{opacity:.95}}
-@-webkit-keyframes wob{from{-webkit-transform:rotate(-8deg) scale(1.02)}to{-webkit-transform:rotate(8deg) scale(1.15)}}
-@keyframes wob{from{transform:rotate(-8deg) scale(1.02)}to{transform:rotate(8deg) scale(1.15)}}
+@-webkit-keyframes wob{from{-webkit-transform:rotate(-3deg) scale(1.02)}to{-webkit-transform:rotate(3deg) scale(1.06)}}
+@keyframes wob{from{transform:rotate(-3deg) scale(1.02)}to{transform:rotate(3deg) scale(1.06)}}
 
 #fx{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:hidden;}
 .p{position:absolute;width:30px;text-align:center;font-size:30px;font-weight:bold;line-height:1;
@@ -740,8 +740,23 @@ function startAnim(i) {
   clearTimeout(el._dt);
   el._dt = setTimeout(function () { el.className = active[i] ? 'tile playing' : 'tile'; }, 140);
   burst(el);
+  /* 鳴っているあいだは、音符がふわふわ出つづける */
+  clearInterval(el._nt);
+  el._nt = setInterval(function () { floatNote(el); }, 550);
 }
-function stopAnim(i) { clearTimeout(tiles[i]._dt); tiles[i].className = 'tile'; }
+function stopAnim(i) { clearTimeout(tiles[i]._dt); clearInterval(tiles[i]._nt); tiles[i].className = 'tile'; }
+function floatNote(el) {
+  if (fx.childNodes.length > 36) return;
+  var r = el.getBoundingClientRect(), k = Math.floor(Math.random() * 3) + 1;
+  var p = document.createElement('div');
+  p.className = 'p p' + k;
+  p.textContent = SYM[Math.floor(Math.random() * SYM.length)];
+  p.style.color = PCOL[Math.floor(Math.random() * PCOL.length)];
+  p.style.left = (r.left + r.width * (0.2 + Math.random() * 0.6) - 15) + 'px';
+  p.style.top = (r.top + r.height * 0.25) + 'px';
+  fx.appendChild(p);
+  removeLater(p);
+}
 
 /* 右上のボタン（子どもが触っても変わりにくいよう、長押しで切りかえ） */
 function showVol() {

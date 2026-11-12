@@ -1,5 +1,5 @@
 /* オフライン用：一度ひらいたら端末に保存して、電波がなくても動くようにする */
-var CACHE = 'densha-oto-v2';
+var CACHE = 'densha-oto-v3';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png',
   'sounds/01_kiteki.m4a',
   'sounds/02_shushu.m4a',
