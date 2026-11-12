@@ -1,6 +1,26 @@
 /* オフライン用：一度ひらいたら端末に保存して、電波がなくても動くようにする */
-var CACHE = 'densha-oto-v1';
-var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
+var CACHE = 'densha-oto-v2';
+var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png',
+  'sounds/01_kiteki.m4a',
+  'sounds/02_shushu.m4a',
+  'sounds/03_gatan.m4a',
+  'sounds/04_shinkansen.m4a',
+  'sounds/05_hassha.m4a',
+  'sounds/06_door.m4a',
+  'sounds/07_chinchin.m4a',
+  'sounds/08_announce.m4a',
+  'sounds/09_motor.m4a',
+  'sounds/10_fune.m4a',
+  'sounds/11_hikouki.m4a',
+  'sounds/12_heli.m4a',
+  'sounds/13_rocket.m4a',
+  'sounds/14_fuusen.m4a',
+  'sounds/15_hanabi.m4a',
+  'sounds/16_rappa.m4a',
+  'sounds/17_doremi.m4a',
+  'sounds/18_hiyoko.m4a',
+  'sounds/19_kaeru.m4a',
+  'sounds/20_ufo.m4a'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));

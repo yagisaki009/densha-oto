@@ -22,12 +22,13 @@ body{font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Hiragino Kaku Goth
 
 #bar{position:fixed;left:0;right:0;top:0;height:52px;}
 #title{position:absolute;left:16px;top:0;line-height:54px;font-size:20px;font-weight:bold;letter-spacing:1px;white-space:nowrap;}
-#vol{position:absolute;right:12px;top:9px;height:36px;line-height:36px;padding:0 14px;border-radius:18px;background:#fff;
-  box-shadow:0 2px 0 rgba(74,44,18,.15);font-size:15px;font-weight:bold;overflow:hidden;white-space:nowrap;}
-#volFill{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffc078;}
-#vol.holding #volFill{width:100%;-webkit-transition:width .9s linear;transition:width .9s linear;}
-#vol span{position:relative;}
-#volHint{font-size:11px;font-weight:normal;opacity:.55;margin-left:6px;}
+#pills{position:absolute;right:12px;top:9px;white-space:nowrap;}
+.pill{position:relative;display:inline-block;vertical-align:top;margin-left:8px;height:36px;line-height:36px;padding:0 14px;
+  border-radius:18px;background:#fff;box-shadow:0 2px 0 rgba(74,44,18,.15);font-size:15px;font-weight:bold;overflow:hidden;}
+.pill .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:#ffc078;}
+.pill.holding .fill{width:100%;-webkit-transition:width .9s linear;transition:width .9s linear;}
+.pill span{position:relative;}
+.pill .hint{font-size:11px;font-weight:normal;opacity:.55;margin-left:6px;}
 
 #grid{position:fixed;left:0;right:0;bottom:0;top:52px;}
 .tile{position:absolute;border-radius:24px;
@@ -79,14 +80,17 @@ body{font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Hiragino Kaku Goth
 <body>
 <div id="bar">
   <div id="title">🚃 でんしゃ おとボタン</div>
-  <div id="vol"><i id="volFill"></i><span id="volIcon">🔉</span> <span id="volText">ふつう</span><span id="volHint">ながおし</span></div>
+  <div id="pills">
+    <div class="pill" id="mode"><i class="fill"></i><span id="modeIcon">🎧</span> <span id="modeText">ほんもの</span><span class="hint">ながおし</span></div>
+    <div class="pill" id="vol"><i class="fill"></i><span id="volIcon">🔉</span> <span id="volText">ふつう</span><span class="hint">ながおし</span></div>
+  </div>
 </div>
 <div id="grid"></div>
 <div id="fx"></div>
 <div id="start">
   <div id="sTitle">でんしゃ おとボタン</div>
   <div id="startBtn"><div class="big">🚂</div><div class="go">タップして はじめる</div></div>
-  <div id="hint">音が出ないときは、iPadの消音（マナーモード）をオフにして音量を上げてください。<br>右上の 🔉 を長押しすると、音の大きさを3段階で変えられます。</div>
+  <div id="hint">音が出ないときは、iPadの消音（マナーモード）をオフにして音量を上げてください。<br>右上の 🎧 を長押しすると「ほんものの音」と「でんしおん」を切りかえ、🔉 を長押しすると音の大きさを3段階で変えられます。</div>
 </div>
 
 <script>
@@ -538,6 +542,68 @@ var S = [
 ];
 var PAL = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#b197fc', '#f783ac', '#a9e34b'];
 
+/* ---------- 本物っぽい効果音（ElevenLabsで作った音・sounds フォルダ） ----------
+   読みこみが終わるまで／読みこめないときは、上の合成音で鳴らす。
+   合成音のままにしたいボタンは、ここを '' にする */
+var REAL = ['01_kiteki', '02_shushu', '03_gatan', '04_shinkansen', '05_hassha', '06_door', '07_chinchin', '08_announce',
+            '09_motor', '10_fune', '11_hikouki', '12_heli', '13_rocket', '14_fuusen', '15_hanabi', '16_rappa',
+            '17_doremi', '18_hiyoko', '19_kaeru', '20_ufo'];
+var REAL_GAIN = 1.0;
+/* 'real' = ほんものの音 / 'synth' = でんしおん（はじめに作った合成音） */
+var mode = 'real';
+try { if (localStorage.getItem('densha-oto-mode') === 'synth') mode = 'synth'; } catch (e) {}
+var raw = [], bufs = [], decoding = false;
+
+/* ファイルは先に取っておき（音を出す準備ができる前でもOK）、1つずつ読む */
+function fetchAll() {
+  var i = 0;
+  function next() {
+    if (i >= REAL.length) return;
+    var k = i++;
+    if (!REAL[k]) { next(); return; }
+    var x = new XMLHttpRequest();
+    x.open('GET', 'sounds/' + REAL[k] + '.m4a', true);
+    x.responseType = 'arraybuffer';
+    x.onload = function () {
+      if ((x.status === 200 || x.status === 0) && x.response) { raw[k] = x.response; decodeAll(); }
+      next();
+    };
+    x.onerror = function () { next(); };
+    x.send();
+  }
+  next();
+}
+
+/* 音のデータに直す（古いiPadに負担をかけないよう1つずつ） */
+function decodeAll() {
+  if (!ctx || decoding) return;
+  var k = -1;
+  for (var j = 0; j < raw.length; j++) if (raw[j] && !bufs[j]) { k = j; break; }
+  if (k < 0) return;
+  decoding = true;
+  var data = raw[k], called = false;
+  raw[k] = null;
+  function done(b) {
+    if (called) return;
+    called = true;
+    if (b) bufs[k] = b;
+    decoding = false;
+    setTimeout(decodeAll, 0);
+  }
+  try {
+    var p = ctx.decodeAudioData(data, function (b) { done(b); }, function () { done(null); });
+    if (p && p['catch']) p['catch'](function () { done(null); });
+  } catch (e) { done(null); }
+}
+
+function playBuf(buf, t) {
+  var s = ctx.createBufferSource();
+  s.buffer = buf;
+  s.connect(V.out);
+  s.start(t);
+  track(s, t + buf.duration);
+}
+
 /* ---------- 再生の管理 ---------- */
 function Voice(dest, trim) {
   this.out = ctx.createGain(); this.out.gain.value = trim; this.out.connect(dest);
@@ -566,6 +632,7 @@ function unlock() {
   if (!ctx) {
     try { ctx = new AC(); } catch (e) { return; }
     master = setupGraph(ctx); noiseBuf = makeNoise(ctx);
+    decodeAll();
   }
   resume();
   if (!unlocked) {
@@ -587,10 +654,14 @@ function play(i) {
     live.sort(function (a, b) { return a.t0 - b.t0; });
     killVoice(live[0], 0.08); stopAnim(live[0].idx);
   }
-  var v = new Voice(master, S[i].g);
+  var buf = (mode === 'real') ? bufs[i] : null;
+  var v = new Voice(master, buf ? REAL_GAIN : S[i].g);
   v.idx = i; v.t0 = ctx.currentTime;
   V = v;
-  try { S[i].fn(ctx.currentTime + 0.03); } catch (e) { if (window.console) console.error(e); }
+  try {
+    if (buf) playBuf(buf, ctx.currentTime + 0.02);
+    else S[i].fn(ctx.currentTime + 0.03);
+  } catch (e) { if (window.console) console.error(e); }
   V = null;
   active[i] = v;
   startAnim(i);
@@ -603,7 +674,7 @@ function play(i) {
 
 /* ---------- 画面 ---------- */
 function $(id) { return document.getElementById(id); }
-var grid = $('grid'), fx = $('fx'), volEl = $('vol'), tiles = [];
+var grid = $('grid'), fx = $('fx'), tiles = [];
 
 for (var n = 0; n < S.length; n++) {
   var el = document.createElement('div');
@@ -641,6 +712,7 @@ function layout() {
   }
 }
 layout();
+fetchAll();
 window.addEventListener('resize', layout);
 window.addEventListener('orientationchange', function () { setTimeout(layout, 300); });
 
@@ -671,35 +743,53 @@ function startAnim(i) {
 }
 function stopAnim(i) { clearTimeout(tiles[i]._dt); tiles[i].className = 'tile'; }
 
-/* 音の大きさ（長押しで切りかえ） */
-var volTimer = null;
+/* 右上のボタン（子どもが触っても変わりにくいよう、長押しで切りかえ） */
 function showVol() {
   $('volIcon').textContent = VOL_ICON[volIdx];
   $('volText').textContent = VOL_NAME[volIdx];
   if (master) master.gain.value = VOLS[volIdx];
 }
-function volPress() {
-  volEl.className = 'holding';
-  clearTimeout(volTimer);
-  volTimer = setTimeout(function () {
-    volTimer = null;
+function showMode() {
+  $('modeIcon').textContent = mode === 'real' ? '🎧' : '🎹';
+  $('modeText').textContent = mode === 'real' ? 'ほんもの' : 'でんしおん';
+}
+function okBeep() {
+  if (!ctx) return;
+  var v = new Voice(master, 1); V = v;
+  tone(ctx.currentTime + 0.02, 1318, 0.3, 0.3);
+  V = null;
+  setTimeout(function () { try { v.out.disconnect(); } catch (e) {} }, 700);
+}
+var HOLD = {
+  vol: function () {
     volIdx = (volIdx + 1) % VOLS.length;
     showVol();
     try { localStorage.setItem('densha-oto-vol', String(volIdx)); } catch (e) {}
-    volEl.className = '';
-    if (ctx) {
-      var v = new Voice(master, 1); V = v;
-      tone(ctx.currentTime + 0.02, 1318, 0.3, 0.3);
-      V = null;
-      setTimeout(function () { try { v.out.disconnect(); } catch (e2) {} }, 700);
-    }
+  },
+  mode: function () {
+    mode = mode === 'real' ? 'synth' : 'real';
+    showMode();
+    try { localStorage.setItem('densha-oto-mode', mode); } catch (e) {}
+  }
+};
+var holdTimer = null, holdEl = null;
+function holdPress(el) {
+  holdRelease();
+  holdEl = el;
+  el.className = 'pill holding';
+  holdTimer = setTimeout(function () {
+    holdTimer = null;
+    holdRelease();
+    HOLD[el.id]();
+    okBeep();
   }, 900);
 }
-function volRelease() {
-  if (volTimer) { clearTimeout(volTimer); volTimer = null; }
-  volEl.className = '';
+function holdRelease() {
+  if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+  if (holdEl) { holdEl.className = 'pill'; holdEl = null; }
 }
 showVol();
+showMode();
 
 /* はじめる */
 var started = false;
@@ -730,9 +820,9 @@ function tileOf(n) {
   }
   return null;
 }
-function isVol(n) {
-  while (n && n !== document) { if (n.id === 'vol') return true; n = n.parentNode; }
-  return false;
+function pillOf(n) {
+  while (n && n !== document) { if (n.id && HOLD[n.id]) return n; n = n.parentNode; }
+  return null;
 }
 
 document.addEventListener('touchstart', function (e) {
@@ -741,9 +831,9 @@ document.addEventListener('touchstart', function (e) {
   if (!started) return;
   resume();
   for (var k = 0; k < e.changedTouches.length; k++) {
-    var tg = e.changedTouches[k].target, el = tileOf(tg);
+    var tg = e.changedTouches[k].target, el = tileOf(tg), pl = pillOf(tg);
     if (el) play(+el.getAttribute('data-i'));
-    else if (isVol(tg)) volPress();
+    else if (pl) holdPress(pl);
   }
 }, NP);
 document.addEventListener('touchmove', function (e) { e.preventDefault(); }, NP);
@@ -753,10 +843,10 @@ document.addEventListener('touchend', function (e) {
   unlock();
   if (!started) { start(); return; }
   for (var k = 0; k < e.changedTouches.length; k++) {
-    if (isVol(e.changedTouches[k].target)) volRelease();
+    if (pillOf(e.changedTouches[k].target)) holdRelease();
   }
 }, NP);
-document.addEventListener('touchcancel', function () { volRelease(); }, NP);
+document.addEventListener('touchcancel', function () { holdRelease(); }, NP);
 document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
@@ -765,13 +855,13 @@ document.addEventListener('mousedown', function (e) {
   if (Date.now() - lastTouch < 1000) return;
   unlock();
   if (!started) { start(); return; }
-  var el = tileOf(e.target);
+  var el = tileOf(e.target), pl = pillOf(e.target);
   if (el) play(+el.getAttribute('data-i'));
-  else if (isVol(e.target)) volPress();
+  else if (pl) holdPress(pl);
 });
 document.addEventListener('mouseup', function () {
   if (Date.now() - lastTouch < 1000) return;
-  volRelease();
+  holdRelease();
 });
 
 /* ---------- オフライン対応 ---------- */
@@ -788,6 +878,11 @@ if (window.applicationCache) {
 
 /* 動作確認用（遊ぶときには使いません） */
 window.__audioState = function () { return ctx ? (ctx.state || 'running') : 'none'; };
+window.__realStatus = function () {
+  var r = [];
+  for (var i = 0; i < S.length; i++) r.push(S[i].l + ':' + (bufs[i] ? bufs[i].duration.toFixed(1) + 's' : (REAL[i] ? '未' : '合成')));
+  return r.join(' ');
+};
 /* 音を画面外で合成して大きさを測る */
 window.__renderTest = function (i) {
   var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;

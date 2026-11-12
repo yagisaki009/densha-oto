@@ -1,8 +1,28 @@
 CACHE MANIFEST
-# でんしゃ おとボタン v1（iOS 11.2以前のiPad用のオフライン保存）
+# でんしゃ おとボタン v2（iOS 11.2以前のiPad用のオフライン保存）
 index.html
 manifest.webmanifest
 icon-180.png
+sounds/01_kiteki.m4a
+sounds/02_shushu.m4a
+sounds/03_gatan.m4a
+sounds/04_shinkansen.m4a
+sounds/05_hassha.m4a
+sounds/06_door.m4a
+sounds/07_chinchin.m4a
+sounds/08_announce.m4a
+sounds/09_motor.m4a
+sounds/10_fune.m4a
+sounds/11_hikouki.m4a
+sounds/12_heli.m4a
+sounds/13_rocket.m4a
+sounds/14_fuusen.m4a
+sounds/15_hanabi.m4a
+sounds/16_rappa.m4a
+sounds/17_doremi.m4a
+sounds/18_hiyoko.m4a
+sounds/19_kaeru.m4a
+sounds/20_ufo.m4a
 
 NETWORK:
 *
